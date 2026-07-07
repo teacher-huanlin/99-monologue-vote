@@ -1,13 +1,12 @@
 {
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.9",
-      "memory": 128
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15mb" }
     }
-  },
+  ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.py" },
-    { "src": "/admin", "dest": "/api/index.py" },
-    { "src": "/debug", "dest": "/api/index.py" }
+    { "src": "/(.*)", "dest": "api/index.py" }
   ]
 }
