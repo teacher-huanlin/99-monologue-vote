@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.9",
+      "memory": 128
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/admin", "dest": "/api/index.py" },
+    { "src": "/debug", "dest": "/api/index.py" }
+  ]
+}

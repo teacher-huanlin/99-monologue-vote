@@ -532,64 +532,60 @@ body {
 
 <script>
 // ============================================================
-// Artist Data: 35 组艺术家
+// API
 // ============================================================
-const ARTISTS = [
-  { id: 1,  name: '星辰工作室',     cat: '数字艺术',   colors: ['#f8c291','#e55039','#f6b092'] },
-  { id: 2,  name: '水墨丹青',       cat: '国画',       colors: ['#82ccdd','#60a3bc','#b8e0ed'] },
-  { id: 3,  name: '光影捕手',       cat: '摄影',       colors: ['#fad390','#e1b12c','#f6d775'] },
-  { id: 4,  name: '像素诗人',       cat: '数字艺术',   colors: ['#ff6b6b','#feca57','#ff9f80'] },
-  { id: 5,  name: '极简主义',       cat: '装置艺术',   colors: ['#a29bfe','#6c5ce7','#c8c2fc'] },
-  { id: 6,  name: '梦幻造物',       cat: '插画',       colors: ['#fd79a8','#e84393','#fab8d2'] },
-  { id: 7,  name: '铁锈与玫瑰',     cat: '雕塑',       colors: ['#e17055','#d63031','#fab1a0'] },
-  { id: 8,  name: '未来回声',       cat: '新媒体',     colors: ['#00cec9','#0984e3','#81ecec'] },
-  { id: 9,  name: '纸间游鱼',       cat: '综合材料',   colors: ['#dfe6e9','#b2bec3','#f5f6fa'] },
-  { id: 10, name: '棱镜实验室',     cat: '实验艺术',   colors: ['#ffeaa7','#fdcb6e','#fee9b0'] },
-  { id: 11, name: '云端画师',       cat: '数字艺术',   colors: ['#74b9ff','#0984e3','#a8d8ff'] },
-  { id: 12, name: '山海经',         cat: '插画',       colors: ['#fab1a0','#e17055','#ffcccc'] },
-  { id: 13, name: '零点共振',       cat: '声音艺术',   colors: ['#81ecec','#00cec9','#c8f7f7'] },
-  { id: 14, name: '燃烧的冰川',     cat: '装置艺术',   colors: ['#ff9f43','#ee5a24','#ffc78d'] },
-  { id: 15, name: '造梦空间',       cat: '新媒体',     colors: ['#a29bfe','#6c5ce7','#cec6fd'] },
-  { id: 16, name: '风之形',         cat: '雕塑',       colors: ['#55efc4','#00b894','#9ff5d8'] },
-  { id: 17, name: '寂静之音',       cat: '摄影',       colors: ['#dfe6e9','#b2bec3','#f0f3f5'] },
-  { id: 18, name: '无限画布',       cat: '数字艺术',   colors: ['#ff6b6b','#ee5a24','#ffa3a3'] },
-  { id: 19, name: '瓷语新说',       cat: '陶瓷艺术',   colors: ['#e0c3fc','#8ec5fc','#f0e6ff'] },
-  { id: 20, name: '数据之花',       cat: '新媒体',     colors: ['#fd79a8','#e84393','#ffb8d2'] },
-  { id: 21, name: '墨迹未干',       cat: '国画',       colors: ['#fab1a0','#d63031','#ffe0d9'] },
-  { id: 22, name: '金属心跳',       cat: '雕塑',       colors: ['#fad390','#e1b12c','#fef0c0'] },
-  { id: 23, name: '透明城市',       cat: '建筑艺术',   colors: ['#81ecec','#00cec9','#c0f5f5'] },
-  { id: 24, name: '星河织造',       cat: '纤维艺术',   colors: ['#a29bfe','#4834d4','#d4cefd'] },
-  { id: 25, name: '暴风雨前',       cat: '绘画',       colors: ['#74b9ff','#2d7dd2','#c0dffd'] },
-  { id: 26, name: '游牧代码',       cat: '数字艺术',   colors: ['#ff9f43','#fdcb6e','#ffe0a3'] },
-  { id: 27, name: '缝隙之间',       cat: '装置艺术',   colors: ['#dfe6e9','#bdc3c7','#f0f2f4'] },
-  { id: 28, name: '霓虹废墟',       cat: '摄影',       colors: ['#fd79a8','#ff6b6b','#ffc8d0'] },
-  { id: 29, name: '重力之外',       cat: '雕塑',       colors: ['#f8c291','#e55039','#fcd5b8'] },
-  { id: 30, name: '感官迷宫',       cat: '新媒体',     colors: ['#ffeaa7','#fdcb6e','#fff3c0'] },
-  { id: 31, name: '纸飞机工厂',     cat: '综合材料',   colors: ['#ff6b6b','#c0392b','#ffb3b3'] },
-  { id: 32, name: '记忆标本',       cat: '实验艺术',   colors: ['#55efc4','#27ae60','#b0f8dd'] },
-  { id: 33, name: '折纸宇宙',       cat: '综合材料',   colors: ['#fd79a8','#e84393','#ffccda'] },
-  { id: 34, name: '声音雕塑',       cat: '声音艺术',   colors: ['#74b9ff','#4834d4','#b8c8fd'] },
-  { id: 35, name: '重影',           cat: '绘画',       colors: ['#dfe6e9','#636e72','#f0f2f4'] },
-];
+const API_BASE = window.location.origin;
+
+// Fingerprint: UUID stored in localStorage for deduplication
+const FP_KEY = 'monologue_fingerprint_v3';
+function getFingerprint() {
+  let fp = localStorage.getItem(FP_KEY);
+  if (!fp) {
+    fp = crypto.randomUUID();
+    localStorage.setItem(FP_KEY, fp);
+  }
+  return fp;
+}
 
 // ============================================================
 // State
 // ============================================================
-const STORAGE_KEY_MY_VOTE = 'monologue_my_vote_v2';
-const STORAGE_KEY_MY_SELECTION = 'monologue_my_selection_v2';
-
-function hasVoted() {
-  return localStorage.getItem(STORAGE_KEY_MY_VOTE) === 'true';
-}
-
-function getMyVotedIds() {
-  const stored = localStorage.getItem(STORAGE_KEY_MY_SELECTION);
-  return stored ? JSON.parse(stored) : [];
-}
-
-const myVotedIds = getMyVotedIds();
-let selectedIds = hasVoted() ? [...myVotedIds] : [];
+let ARTISTS = [];
+let selectedIds = [];
+let myVotedIds = [];
+let hasAlreadyVoted = false;
+let isLoading = true;
 const MAX_VOTES = 5;
+
+async function loadArtistsFromAPI() {
+  try {
+    const res = await fetch(API_BASE + '/api/artists');
+    if (!res.ok) throw new Error('API error');
+    ARTISTS = await res.json();
+    return true;
+  } catch (e) {
+    console.error('Failed to load artists:', e);
+    return false;
+  }
+}
+
+async function checkVotedStatus() {
+  try {
+    const fp = getFingerprint();
+    const res = await fetch(API_BASE + '/api/check-fingerprint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fingerprint: fp }),
+    });
+    const data = await res.json();
+    if (data.voted) {
+      hasAlreadyVoted = true;
+      myVotedIds = data.voted_ids || [];
+    }
+  } catch (e) {
+    console.error('Failed to check vote status:', e);
+  }
+}
 
 // ============================================================
 // Poster Generator
@@ -623,16 +619,20 @@ function posterHTML(artist) {
 // ============================================================
 function renderArtistGrid() {
   const grid = document.getElementById('artist-grid');
-  const voted = hasVoted();
+  
+  if (isLoading) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 24px;color:#8c7b6d;font-size:15px;">加载中...</div>`;
+    return;
+  }
 
   grid.innerHTML = ARTISTS.map(a => {
     const isSelected = selectedIds.includes(a.id);
     const isVotedByMe = myVotedIds.includes(a.id);
     return `
-      <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedByMe && voted ? 'voted-by-me' : ''}"
+      <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedByMe && hasAlreadyVoted ? 'voted-by-me' : ''}"
            data-id="${a.id}"
            onclick="toggleArtist(${a.id})"
-           style="${voted ? 'cursor:default;' : ''}">
+           style="${hasAlreadyVoted ? 'cursor:default;' : ''}">
         <div class="card-poster">
           ${posterHTML(a)}
         </div>
@@ -649,7 +649,7 @@ function renderArtistGrid() {
 
 function renderVoteDoneBanner() {
   const area = document.getElementById('vote-done-area');
-  if (!hasVoted()) { area.innerHTML = ''; return; }
+  if (!hasAlreadyVoted) { area.innerHTML = ''; return; }
   const names = myVotedIds.map(id => ARTISTS.find(a => a.id === id)?.name || '').filter(Boolean);
   area.innerHTML = `
     <div class="vote-done-banner">
@@ -668,7 +668,6 @@ function renderVoteDoneBanner() {
 }
 
 function updateVoteBar() {
-  const voted = hasVoted();
   document.getElementById('selected-num').textContent = selectedIds.length;
   document.getElementById('selected-pills').innerHTML = selectedIds.map(id => {
     const a = ARTISTS.find(x => x.id === id);
@@ -678,7 +677,15 @@ function updateVoteBar() {
   const submitBtn = document.getElementById('submit-btn');
   const clearBtn = document.getElementById('clear-btn');
 
-  if (voted) {
+  if (isLoading) {
+    submitBtn.textContent = '加载中...';
+    submitBtn.disabled = true;
+    submitBtn.classList.remove('ready');
+    clearBtn.style.display = 'none';
+    return;
+  }
+
+  if (hasAlreadyVoted) {
     submitBtn.textContent = '已投票 ✓';
     submitBtn.disabled = true;
     submitBtn.classList.remove('ready');
@@ -707,7 +714,7 @@ function updateVoteBar() {
 // Interaction
 // ============================================================
 function toggleArtist(id) {
-  if (hasVoted()) return;
+  if (hasAlreadyVoted) return;
   const idx = selectedIds.indexOf(id);
   if (idx >= 0) {
     selectedIds.splice(idx, 1);
@@ -739,7 +746,7 @@ shakeStyle.textContent = `
 document.head.appendChild(shakeStyle);
 
 function clearSelection() {
-  if (hasVoted()) return;
+  if (hasAlreadyVoted) return;
   selectedIds = [];
   renderArtistGrid();
 }
@@ -748,7 +755,7 @@ function clearSelection() {
 // Modal
 // ============================================================
 function confirmVote() {
-  if (selectedIds.length !== MAX_VOTES || hasVoted()) return;
+  if (selectedIds.length !== MAX_VOTES || hasAlreadyVoted) return;
   const list = document.getElementById('confirm-list');
   list.innerHTML = selectedIds.map(id => {
     const a = ARTISTS.find(x => x.id === id);
@@ -761,12 +768,42 @@ function closeModal() {
   document.getElementById('confirm-modal').style.display = 'none';
 }
 
-function submitVote() {
-  if (hasVoted()) return;
-  localStorage.setItem(STORAGE_KEY_MY_VOTE, 'true');
-  localStorage.setItem(STORAGE_KEY_MY_SELECTION, JSON.stringify([...selectedIds]));
-  closeModal();
-  window.location.reload();
+async function submitVote() {
+  if (hasAlreadyVoted) return;
+  
+  const submitBtn = document.getElementById('submit-btn');
+  submitBtn.textContent = '提交中...';
+  submitBtn.disabled = true;
+
+  try {
+    const fp = getFingerprint();
+    const res = await fetch(API_BASE + '/api/vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        voted_ids: [...selectedIds],
+        fingerprint: fp,
+      }),
+    });
+    const data = await res.json();
+    
+    if (res.ok && data.success) {
+      hasAlreadyVoted = true;
+      myVotedIds = [...selectedIds];
+      closeModal();
+      renderArtistGrid();
+    } else {
+      alert(data.error || '投票失败，请重试');
+      submitBtn.textContent = '确认投票 ✨';
+      submitBtn.disabled = false;
+      submitBtn.classList.add('ready');
+    }
+  } catch (e) {
+    alert('网络错误，请检查网络后重试');
+    submitBtn.textContent = '确认投票 ✨';
+    submitBtn.disabled = false;
+    submitBtn.classList.add('ready');
+  }
 }
 
 document.getElementById('confirm-modal').addEventListener('click', function(e) {
@@ -780,7 +817,36 @@ document.addEventListener('keydown', function(e) {
 // ============================================================
 // Init
 // ============================================================
-renderArtistGrid();
+(async function init() {
+  // Show loading state
+  isLoading = true;
+  renderArtistGrid();
+
+  // Check if already voted (from server)
+  await checkVotedStatus();
+
+  // Load artists from API
+  const ok = await loadArtistsFromAPI();
+  
+  // On API failure, no artists to show
+  if (!ok) {
+    document.getElementById('artist-grid').innerHTML = 
+      `<div style="grid-column:1/-1;text-align:center;padding:60px 24px;color:#e86a58;font-size:15px;">
+        ⚠️ 加载艺术家数据失败，请刷新页面重试
+      </div>`;
+    document.getElementById('submit-btn').textContent = '加载失败';
+    document.getElementById('submit-btn').disabled = true;
+    return;
+  }
+
+  // If already voted, set selectedIds from server
+  if (hasAlreadyVoted) {
+    selectedIds = [...myVotedIds];
+  }
+
+  isLoading = false;
+  renderArtistGrid();
+})();
 </script>
 </body>
 </html>
