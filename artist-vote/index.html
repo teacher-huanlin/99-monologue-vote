@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>九十九出独角戏第二季</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #fef9f4;
+  --card-bg: #ffffff;
+  --text: #3d3027;
+  --text-secondary: #8c7b6d;
+  --accent: #e86a58;
+  --accent-light: #f8a48b;
+  --accent-soft: #fef0ec;
+  --gold: #d4a853;
+  --gold-light: #f0d78c;
+  --border: #ece3d8;
+  --shadow: 0 2px 12px rgba(0,0,0,0.05);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+  --radius: 16px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding-bottom: 120px;
+}
+
+/* ===== Hero ===== */
+.hero {
+  background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 50%, #ffc371 100%);
+  color: #fff;
+  padding: 56px 24px 52px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 40%, rgba(255,255,255,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 60%, rgba(255,255,255,0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 20%, rgba(255,200,150,0.15) 0%, transparent 60%);
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+.hero-content { position: relative; z-index: 1; }
+.hero .badge {
+  display: inline-block;
+  padding: 5px 18px;
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(4px);
+  border-radius: 50px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  margin-bottom: 18px;
+  font-weight: 500;
+}
+.hero h1 {
+  font-size: clamp(26px, 5.5vw, 46px);
+  font-weight: 800;
+  letter-spacing: 3px;
+  margin-bottom: 14px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+.hero .subtitle {
+  font-size: clamp(15px, 2.5vw, 19px);
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 28px;
+  font-weight: 500;
+}
+.hero .rules {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+  padding: 12px 24px;
+  border-radius: 50px;
+}
+.hero .rules span { display: inline-flex; align-items: center; gap: 8px; }
+.hero .rules .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  display: inline-block;
+  opacity: 0.7;
+}
+
+/* ===== Container ===== */
+.container { max-width: 1320px; margin: 0 auto; padding: 28px 16px; }
+
+/* ===== Section Header ===== */
+.section-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.section-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+.section-header p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* ===== Artist Grid ===== */
+.artist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 4px 0;
+}
+
+/* ===== Artist Card ===== */
+.artist-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 3px solid transparent;
+  box-shadow: var(--shadow);
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.artist-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.1);
+}
+.artist-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(232,106,88,0.2), var(--shadow-lg);
+  transform: translateY(-6px);
+}
+.artist-card.voted-by-me {
+  border-color: var(--accent-light);
+}
+
+/* Poster */
+.card-poster {
+  width: 100%;
+  aspect-ratio: 3/4;
+  position: relative;
+  overflow: hidden;
+}
+.card-poster .poster-bg {
+  width: 100%; height: 100%;
+  position: absolute; inset: 0;
+}
+.card-poster .poster-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.12);
+  padding: 16px;
+}
+.card-poster .poster-name {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  letter-spacing: 1.5px;
+  line-height: 1.3;
+}
+.card-poster .poster-no {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.94);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800;
+  color: var(--accent);
+  z-index: 2;
+}
+.card-poster .selected-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 3;
+  animation: popIn 0.3s ease;
+  box-shadow: 0 2px 8px rgba(232,106,88,0.4);
+}
+.artist-card.selected .selected-badge { display: flex; }
+@keyframes popIn {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.selected-badge svg { width: 16px; height: 16px; color: #fff; }
+
+/* Card Info */
+.card-info {
+  padding: 14px 16px;
+  text-align: center;
+}
+.card-info .artist-name {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.card-info .artist-cat {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--accent-soft);
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 10px;
+}
+
+/* ===== Vote Bar (Bottom Fixed) ===== */
+.vote-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 100;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.05);
+}
+.vote-bar .selected-summary {
+  display: flex; align-items: center; gap: 12px;
+  flex: 1; min-width: 0; overflow-x: auto;
+}
+.vote-bar .selected-count {
+  font-size: 14px; color: var(--text-secondary); white-space: nowrap;
+}
+.vote-bar .selected-count strong {
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 800;
+}
+.vote-bar .selected-pills {
+  display: flex; gap: 6px; flex-wrap: nowrap;
+}
+.vote-bar .selected-pill {
+  padding: 5px 14px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.vote-bar .clear-btn {
+  padding: 10px 20px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: var(--transition);
+  white-space: nowrap;
+  font-weight: 500;
+}
+.vote-bar .clear-btn:hover {
+  border-color: var(--accent-light);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.vote-bar .submit-btn {
+  padding: 13px 36px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px rgba(232,106,88,0.25);
+}
+.vote-bar .submit-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 24px rgba(232,106,88,0.35);
+}
+.vote-bar .submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.vote-bar .submit-btn.ready {
+  background: linear-gradient(135deg, var(--accent), #d45341);
+  box-shadow: 0 4px 20px rgba(232,106,88,0.35);
+  animation: subtlePulse 2s ease-in-out infinite;
+}
+@keyframes subtlePulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(232,106,88,0.35); }
+  50% { box-shadow: 0 4px 32px rgba(232,106,88,0.5); }
+}
+
+/* ===== Voted State ===== */
+.vote-done-banner {
+  text-align: center;
+  padding: 36px 28px;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 28px;
+  border: 1.5px solid var(--accent-soft);
+}
+.vote-done-banner .check-icon {
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #66bb6a, #43a047);
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 16px rgba(76,175,80,0.3);
+}
+.vote-done-banner h3 { font-size: 22px; margin-bottom: 10px; color: var(--text); }
+.vote-done-banner p { color: var(--text-secondary); font-size: 15px; line-height: 1.8; }
+.vote-done-banner .voted-list {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin: 14px 0 6px;
+}
+.vote-done-banner .voted-tag {
+  padding: 6px 16px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(2px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 32px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.15);
+  animation: modalIn 0.3s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal h3 { font-size: 22px; margin-bottom: 14px; text-align: center; color: var(--text); }
+.modal .modal-sub {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.modal .confirm-list {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center; margin: 18px 0;
+}
+.modal .confirm-list .confirm-pill {
+  padding: 9px 20px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.modal .warning-text {
+  text-align: center;
+  font-size: 13px;
+  color: #ef6c6c;
+  margin: 10px 0 20px;
+  font-weight: 600;
+}
+.modal .modal-actions {
+  display: flex; gap: 14px;
+  justify-content: center;
+  margin-top: 6px;
+}
+.modal .btn-cancel {
+  padding: 11px 32px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-secondary);
+  transition: var(--transition);
+  font-weight: 500;
+}
+.modal .btn-cancel:hover { border-color: #ccc; color: var(--text); }
+.modal .btn-confirm {
+  padding: 11px 32px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  transition: var(--transition);
+  letter-spacing: 1px;
+}
+.modal .btn-confirm:hover { transform: scale(1.04); }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .artist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 14px;
+  }
+  .card-poster .poster-name { font-size: 15px; }
+  .card-info .artist-name { font-size: 14px; }
+  .card-info .artist-cat { font-size: 11px; }
+  .vote-bar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+  .vote-bar .selected-summary { order: 1; width: 100%; }
+  .vote-bar .submit-btn { order: 2; width: 100%; text-align: center; }
+  .vote-bar .clear-btn { order: 3; }
+  .hero { padding: 40px 16px 44px; }
+  .hero h1 { letter-spacing: 1.5px; }
+  .hero .rules { padding: 10px 18px; gap: 6px 16px; font-size: 13px; }
+}
+
+@media (max-width: 400px) {
+  .artist-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .hero h1 { font-size: 22px; }
+  .hero .rules { font-size: 12px; padding: 8px 14px; }
+  .vote-bar .selected-pill { font-size: 12px; padding: 4px 10px; }
+  .hero .subtitle { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<header class="hero">
+  <div class="hero-content">
+    <div class="badge">THE MONOLOGUE · SEASON 2</div>
+    <h1>九十九出独角戏第二季</h1>
+    <p class="subtitle">为您欣赏的艺术家投出珍贵一票</p>
+    <div class="rules">
+      <span><span class="dot"></span>每人 5 票</span>
+      <span><span class="dot"></span>每位艺术家限投 1 票</span>
+      <span><span class="dot"></span>确认后不可更改</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="section-header">
+    <h2>35 组参展艺术家</h2>
+    <p>点击卡片选择您支持的艺术家，共可选择 5 位</p>
+  </div>
+
+  <div id="vote-done-area"></div>
+  <div class="artist-grid" id="artist-grid"></div>
+</div>
+
+<!-- Bottom Vote Bar -->
+<div class="vote-bar" id="vote-bar">
+  <div class="selected-summary">
+    <span class="selected-count">已选 <strong id="selected-num">0</strong> / 5</span>
+    <div class="selected-pills" id="selected-pills"></div>
+  </div>
+  <button class="clear-btn" id="clear-btn" onclick="clearSelection()">清空重选</button>
+  <button class="submit-btn" id="submit-btn" onclick="confirmVote()" disabled>确认投票</button>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirm-modal" style="display:none;">
+  <div class="modal">
+    <h3>🎭 确认您的投票</h3>
+    <p class="modal-sub">您将把 5 票分别投给以下艺术家：</p>
+    <div class="confirm-list" id="confirm-list"></div>
+    <p class="warning-text">⚠ 投票一经确认，不可修改或撤销</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">再想想</button>
+      <button class="btn-confirm" onclick="submitVote()">确认提交</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Artist Data: 35 组艺术家
+// ============================================================
+const ARTISTS = [
+  { id: 1,  name: '星辰工作室',     cat: '数字艺术',   colors: ['#f8c291','#e55039','#f6b092'] },
+  { id: 2,  name: '水墨丹青',       cat: '国画',       colors: ['#82ccdd','#60a3bc','#b8e0ed'] },
+  { id: 3,  name: '光影捕手',       cat: '摄影',       colors: ['#fad390','#e1b12c','#f6d775'] },
+  { id: 4,  name: '像素诗人',       cat: '数字艺术',   colors: ['#ff6b6b','#feca57','#ff9f80'] },
+  { id: 5,  name: '极简主义',       cat: '装置艺术',   colors: ['#a29bfe','#6c5ce7','#c8c2fc'] },
+  { id: 6,  name: '梦幻造物',       cat: '插画',       colors: ['#fd79a8','#e84393','#fab8d2'] },
+  { id: 7,  name: '铁锈与玫瑰',     cat: '雕塑',       colors: ['#e17055','#d63031','#fab1a0'] },
+  { id: 8,  name: '未来回声',       cat: '新媒体',     colors: ['#00cec9','#0984e3','#81ecec'] },
+  { id: 9,  name: '纸间游鱼',       cat: '综合材料',   colors: ['#dfe6e9','#b2bec3','#f5f6fa'] },
+  { id: 10, name: '棱镜实验室',     cat: '实验艺术',   colors: ['#ffeaa7','#fdcb6e','#fee9b0'] },
+  { id: 11, name: '云端画师',       cat: '数字艺术',   colors: ['#74b9ff','#0984e3','#a8d8ff'] },
+  { id: 12, name: '山海经',         cat: '插画',       colors: ['#fab1a0','#e17055','#ffcccc'] },
+  { id: 13, name: '零点共振',       cat: '声音艺术',   colors: ['#81ecec','#00cec9','#c8f7f7'] },
+  { id: 14, name: '燃烧的冰川',     cat: '装置艺术',   colors: ['#ff9f43','#ee5a24','#ffc78d'] },
+  { id: 15, name: '造梦空间',       cat: '新媒体',     colors: ['#a29bfe','#6c5ce7','#cec6fd'] },
+  { id: 16, name: '风之形',         cat: '雕塑',       colors: ['#55efc4','#00b894','#9ff5d8'] },
+  { id: 17, name: '寂静之音',       cat: '摄影',       colors: ['#dfe6e9','#b2bec3','#f0f3f5'] },
+  { id: 18, name: '无限画布',       cat: '数字艺术',   colors: ['#ff6b6b','#ee5a24','#ffa3a3'] },
+  { id: 19, name: '瓷语新说',       cat: '陶瓷艺术',   colors: ['#e0c3fc','#8ec5fc','#f0e6ff'] },
+  { id: 20, name: '数据之花',       cat: '新媒体',     colors: ['#fd79a8','#e84393','#ffb8d2'] },
+  { id: 21, name: '墨迹未干',       cat: '国画',       colors: ['#fab1a0','#d63031','#ffe0d9'] },
+  { id: 22, name: '金属心跳',       cat: '雕塑',       colors: ['#fad390','#e1b12c','#fef0c0'] },
+  { id: 23, name: '透明城市',       cat: '建筑艺术',   colors: ['#81ecec','#00cec9','#c0f5f5'] },
+  { id: 24, name: '星河织造',       cat: '纤维艺术',   colors: ['#a29bfe','#4834d4','#d4cefd'] },
+  { id: 25, name: '暴风雨前',       cat: '绘画',       colors: ['#74b9ff','#2d7dd2','#c0dffd'] },
+  { id: 26, name: '游牧代码',       cat: '数字艺术',   colors: ['#ff9f43','#fdcb6e','#ffe0a3'] },
+  { id: 27, name: '缝隙之间',       cat: '装置艺术',   colors: ['#dfe6e9','#bdc3c7','#f0f2f4'] },
+  { id: 28, name: '霓虹废墟',       cat: '摄影',       colors: ['#fd79a8','#ff6b6b','#ffc8d0'] },
+  { id: 29, name: '重力之外',       cat: '雕塑',       colors: ['#f8c291','#e55039','#fcd5b8'] },
+  { id: 30, name: '感官迷宫',       cat: '新媒体',     colors: ['#ffeaa7','#fdcb6e','#fff3c0'] },
+  { id: 31, name: '纸飞机工厂',     cat: '综合材料',   colors: ['#ff6b6b','#c0392b','#ffb3b3'] },
+  { id: 32, name: '记忆标本',       cat: '实验艺术',   colors: ['#55efc4','#27ae60','#b0f8dd'] },
+  { id: 33, name: '折纸宇宙',       cat: '综合材料',   colors: ['#fd79a8','#e84393','#ffccda'] },
+  { id: 34, name: '声音雕塑',       cat: '声音艺术',   colors: ['#74b9ff','#4834d4','#b8c8fd'] },
+  { id: 35, name: '重影',           cat: '绘画',       colors: ['#dfe6e9','#636e72','#f0f2f4'] },
+];
+
+// ============================================================
+// State
+// ============================================================
+const STORAGE_KEY_MY_VOTE = 'monologue_my_vote_v2';
+const STORAGE_KEY_MY_SELECTION = 'monologue_my_selection_v2';
+
+function hasVoted() {
+  return localStorage.getItem(STORAGE_KEY_MY_VOTE) === 'true';
+}
+
+function getMyVotedIds() {
+  const stored = localStorage.getItem(STORAGE_KEY_MY_SELECTION);
+  return stored ? JSON.parse(stored) : [];
+}
+
+const myVotedIds = getMyVotedIds();
+let selectedIds = hasVoted() ? [...myVotedIds] : [];
+const MAX_VOTES = 5;
+
+// ============================================================
+// Poster Generator
+// ============================================================
+function posterHTML(artist) {
+  const [c1, c2, c3] = artist.colors;
+  return `
+    <div class="poster-bg" style="background:linear-gradient(155deg,${c1} 0%,${c2} 55%,${c3} 100%)">
+      <svg viewBox="0 0 200 260" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.22" preserveAspectRatio="none">
+        <circle cx="25%" cy="20%" r="30%" fill="rgba(255,255,255,0.18)"/>
+        <circle cx="70%" cy="65%" r="38%" fill="rgba(0,0,0,0.05)"/>
+        <polygon points="55,35 125,28 145,105 70,115" fill="rgba(255,255,255,0.07)"/>
+        <rect x="15" y="185" width="65" height="5" rx="2.5" fill="rgba(255,255,255,0.22)"/>
+        <rect x="95" y="210" width="85" height="4" rx="2" fill="rgba(255,255,255,0.13)"/>
+        <line x1="25" y1="85" x2="175" y2="78" stroke="rgba(255,255,255,0.09)" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="poster-overlay">
+      <span class="poster-name">${artist.name}</span>
+    </div>
+    <div class="poster-no">${artist.id}</div>
+    <div class="selected-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>`;
+}
+
+// ============================================================
+// Render
+// ============================================================
+function renderArtistGrid() {
+  const grid = document.getElementById('artist-grid');
+  const voted = hasVoted();
+
+  grid.innerHTML = ARTISTS.map(a => {
+    const isSelected = selectedIds.includes(a.id);
+    const isVotedByMe = myVotedIds.includes(a.id);
+    return `
+      <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedByMe && voted ? 'voted-by-me' : ''}"
+           data-id="${a.id}"
+           onclick="toggleArtist(${a.id})"
+           style="${voted ? 'cursor:default;' : ''}">
+        <div class="card-poster">
+          ${posterHTML(a)}
+        </div>
+        <div class="card-info">
+          <div class="artist-name">${a.name}</div>
+          <div class="artist-cat">${a.cat}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  updateVoteBar();
+  renderVoteDoneBanner();
+}
+
+function renderVoteDoneBanner() {
+  const area = document.getElementById('vote-done-area');
+  if (!hasVoted()) { area.innerHTML = ''; return; }
+  const names = myVotedIds.map(id => ARTISTS.find(a => a.id === id)?.name || '').filter(Boolean);
+  area.innerHTML = `
+    <div class="vote-done-banner">
+      <div class="check-icon">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h3>投票提交成功</h3>
+      <p>感谢参与「九十九出独角戏第二季」</p>
+      <div class="voted-list">
+        ${names.map(n => `<span class="voted-tag">${n}</span>`).join('')}
+      </div>
+      <p style="font-size:13px;color:#aaa;">投票已记录，不可重复提交</p>
+    </div>`;
+}
+
+function updateVoteBar() {
+  const voted = hasVoted();
+  document.getElementById('selected-num').textContent = selectedIds.length;
+  document.getElementById('selected-pills').innerHTML = selectedIds.map(id => {
+    const a = ARTISTS.find(x => x.id === id);
+    return a ? `<span class="selected-pill">${a.name}</span>` : '';
+  }).join('');
+
+  const submitBtn = document.getElementById('submit-btn');
+  const clearBtn = document.getElementById('clear-btn');
+
+  if (voted) {
+    submitBtn.textContent = '已投票 ✓';
+    submitBtn.disabled = true;
+    submitBtn.classList.remove('ready');
+    clearBtn.style.display = 'none';
+    document.getElementById('vote-bar').style.opacity = '0.6';
+  } else {
+    document.getElementById('vote-bar').style.opacity = '1';
+    clearBtn.style.display = '';
+    if (selectedIds.length === MAX_VOTES) {
+      submitBtn.textContent = '确认投票 ✨';
+      submitBtn.disabled = false;
+      submitBtn.classList.add('ready');
+    } else if (selectedIds.length > 0) {
+      submitBtn.textContent = `还差 ${MAX_VOTES - selectedIds.length} 票`;
+      submitBtn.disabled = true;
+      submitBtn.classList.remove('ready');
+    } else {
+      submitBtn.textContent = '请选择艺术家';
+      submitBtn.disabled = true;
+      submitBtn.classList.remove('ready');
+    }
+  }
+}
+
+// ============================================================
+// Interaction
+// ============================================================
+function toggleArtist(id) {
+  if (hasVoted()) return;
+  const idx = selectedIds.indexOf(id);
+  if (idx >= 0) {
+    selectedIds.splice(idx, 1);
+  } else {
+    if (selectedIds.length >= MAX_VOTES) {
+      shakeElement(document.getElementById('submit-btn'));
+      return;
+    }
+    selectedIds.push(id);
+  }
+  renderArtistGrid();
+}
+
+function shakeElement(el) {
+  el.style.animation = 'none';
+  el.offsetHeight;
+  el.style.animation = 'shake 0.4s ease';
+  setTimeout(() => el.style.animation = '', 400);
+}
+
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = `
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    75% { transform: translateX(-4px); }
+  }`;
+document.head.appendChild(shakeStyle);
+
+function clearSelection() {
+  if (hasVoted()) return;
+  selectedIds = [];
+  renderArtistGrid();
+}
+
+// ============================================================
+// Modal
+// ============================================================
+function confirmVote() {
+  if (selectedIds.length !== MAX_VOTES || hasVoted()) return;
+  const list = document.getElementById('confirm-list');
+  list.innerHTML = selectedIds.map(id => {
+    const a = ARTISTS.find(x => x.id === id);
+    return a ? `<span class="confirm-pill">${a.name}</span>` : '';
+  }).join('');
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('confirm-modal').style.display = 'none';
+}
+
+function submitVote() {
+  if (hasVoted()) return;
+  localStorage.setItem(STORAGE_KEY_MY_VOTE, 'true');
+  localStorage.setItem(STORAGE_KEY_MY_SELECTION, JSON.stringify([...selectedIds]));
+  closeModal();
+  window.location.reload();
+}
+
+document.getElementById('confirm-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ============================================================
+// Init
+// ============================================================
+renderArtistGrid();
+</script>
+</body>
+</html>
