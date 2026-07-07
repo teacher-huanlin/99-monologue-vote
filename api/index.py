@@ -10,9 +10,6 @@ from functools import wraps
 
 from flask import Flask, request, jsonify, render_template_string, make_response, send_from_directory
 
-# 预导入，避免 Vercel 热加载时遗漏
-import pg8000
-
 try:
     import ssl
 except ImportError:
@@ -25,7 +22,14 @@ DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
 ADMIN_USER = os.environ.get('ADMIN_USER', 'admin')
 ADMIN_PASS = os.environ.get('ADMIN_PASS', 'admin123')
 
-# 项目根目录（Vercel 下 api/index.py 在项目 api/ 子目录内）
+# 条件导入 pg8000（匹配 find-passion-tool 模式，避免本地无 pg8000 时导入失败）
+try:
+    if DATABASE_URL:
+        import pg8000
+except ImportError:
+    pass
+
+# 项目根目录
 HERE = Path(__file__).parent
 ROOT = HERE.parent
 
@@ -209,7 +213,7 @@ def auth_required(f):
         if not auth or not (auth.username == ADMIN_USER and auth.password == ADMIN_PASS):
             return make_response(
                 'Unauthorized', 401,
-                {'WWW-Authenticate': 'Basic realm="九十九出独角戏 管理后台"'}
+                {'WWW-Authenticate': 'Basic realm="Admin Panel"'}
             )
         return f(*args, **kwargs)
     return decorated
