@@ -597,9 +597,6 @@ function posterHTML(artist) {
     return `
     <div class="poster-bg" style="background-image:url('${artist.imageUrl}');background-size:cover;background-position:center;">
     </div>
-    <div class="poster-overlay">
-      <span class="poster-name">${artist.name}</span>
-    </div>
     <div class="poster-no">${artist.id}</div>
     <div class="selected-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -617,9 +614,6 @@ function posterHTML(artist) {
         <rect x="95" y="210" width="85" height="4" rx="2" fill="rgba(255,255,255,0.13)"/>
         <line x1="25" y="85" x2="175" y2="78" stroke="rgba(255,255,255,0.09)" stroke-width="1.5"/>
       </svg>
-    </div>
-    <div class="poster-overlay">
-      <span class="poster-name">${artist.name}</span>
     </div>
     <div class="poster-no">${artist.id}</div>
     <div class="selected-badge">
