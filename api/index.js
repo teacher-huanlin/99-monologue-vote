@@ -1,11 +1,19 @@
 // 九十九出独角戏第二季 — 投票后端 (Node.js)
 // 阶段 1: 静态资源 (images 路由 + HTML 页面)
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..');
+
+function readdirSyncSafe(p) {
+  try {
+    return readdirSync(p);
+  } catch (e) {
+    return `error: ${e.message}`;
+  }
+}
 
 // 读取 artists.json
 let artistsData = [];
@@ -102,7 +110,15 @@ export default async function handler(req, res) {
   // API: 健康检查
   if (path === '/api/health') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    return res.status(200).json({ ok: true, version: process.version, artistsCount: artistsData.length });
+    return res.status(200).json({
+      ok: true,
+      version: process.version,
+      artistsCount: artistsData.length,
+      __dirname,
+      cwd: process.cwd(),
+      listing: readdirSyncSafe(join(__dirname, '..')),
+      apiListing: readdirSyncSafe(__dirname),
+    });
   }
 
   // 404
