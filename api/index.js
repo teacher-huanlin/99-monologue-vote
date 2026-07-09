@@ -157,26 +157,25 @@ export default async function handler(req, res) {
   }
 
   // API: 艺术家列表
+  // 永远以 artists.json 为权威源 (顺序/imageUrl/name/cat/artist/colors)
+  // 仅从 DB 合并 votes 数字
   if (path === '/api/artists') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     if (neonReady && sql) {
       try {
         await ensureDb();
-        const rows = await sql`SELECT id, name, cat, votes FROM artists_votes ORDER BY id`;
-        const metaMap = {};
-        for (const a of artistsData) metaMap[a.id] = a;
-        const merged = rows.map((r) => {
-          const meta = metaMap[r.id] || {};
-          return {
-            id: r.id,
-            name: meta.name || r.name,
-            artist: meta.artist || '',
-            cat: meta.cat || r.cat,
-            votes: r.votes || 0,
-            colors: meta.colors || ['#ccc', '#aaa', '#eee'],
-            imageUrl: meta.imageUrl || null,
-          };
-        });
+        const rows = await sql`SELECT id, votes FROM artists_votes ORDER BY id`;
+        const votesMap = {};
+        for (const r of rows) votesMap[r.id] = r.votes || 0;
+        const merged = artistsData.map((a) => ({
+          id: a.id,
+          name: a.name,
+          artist: a.artist || '',
+          cat: a.cat || '',
+          votes: votesMap[a.id] || 0,
+          colors: a.colors || ['#ccc', '#aaa', '#eee'],
+          imageUrl: a.imageUrl || null,
+        }));
         return res.status(200).json(merged);
       } catch (e) {
         console.error('[api/artists] DB error:', e.message);
