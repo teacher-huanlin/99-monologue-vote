@@ -1,11 +1,20 @@
 // 九十九出独角戏第二季 — 投票后端 (Node.js)
 import { neon } from '@neondatabase/serverless';
-import artistsData from './artists.json' with { type: 'json' };
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// 显式读取 artists.json (兼容 Vercel serverless 打包, 避免 import attributes 限制)
+let artistsData = [];
+try {
+  const raw = readFileSync(join(__dirname, 'artists.json'), 'utf-8');
+  artistsData = JSON.parse(raw);
+} catch (e) {
+  console.error('Failed to load artists.json:', e.message);
+  artistsData = [];
+}
 
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
