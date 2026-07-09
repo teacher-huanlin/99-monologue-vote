@@ -1,5 +1,5 @@
 // 九十九出独角戏第二季 — 投票后端 (Node.js)
-// 阶段 1: 静态资源 (images 路由 + HTML 页面)
+// 阶段 2: 静态资源 + daily_votes 投票机制
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -18,15 +18,57 @@ try {
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
+const DATABASE_URL = process.env.DATABASE_URL || '';
 
+// 动态 import neon (失败也不影响静态资源 serve)
+let sql = null;
+let neonReady = false;
+const neonPromise = import('@neondatabase/serverless')
+  .then((mod) => {
+    if (DATABASE_URL) {
+      sql = mod.neon(DATABASE_URL);
+      neonReady = true;
+      console.log('[init] neon loaded');
+    } else {
+      console.warn('[init] DATABASE_URL not set, voting in no-DB mode');
+    }
+  })
+  .catch((e) => {
+    console.error('[init] neon failed to load:', e.message);
+  });
+
+// 获取当天日期字符串 (YYYY-MM-DD, UTC+8 中国时区)
 function getTodayKey() {
   const now = new Date();
   const chinaTime = new Date(now.getTime() + (now.getTimezoneOffset() + 8 * 60) * 60 * 1000);
   return chinaTime.toISOString().slice(0, 10);
 }
 
+async function ensureDb() {
+  if (!neonReady || !sql) return false;
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS artists_votes (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      cat TEXT DEFAULT '',
+      votes INTEGER DEFAULT 0
+    )`;
+    await sql`CREATE TABLE IF NOT EXISTS daily_votes (
+      id SERIAL PRIMARY KEY,
+      fingerprint TEXT NOT NULL,
+      artist_id INTEGER NOT NULL,
+      vote_date TEXT NOT NULL,
+      voted_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(fingerprint, artist_id, vote_date)
+    )`;
+    return true;
+  } catch (e) {
+    console.error('[ensureDb] error:', e.message);
+    return false;
+  }
+}
+
 function readPageOrNull(relPath) {
-  // 多个候选路径, 兼容不同部署布局
   const candidates = [
     join(PROJECT_ROOT, relPath),
     join(__dirname, relPath),
@@ -51,7 +93,28 @@ function checkAuth(req) {
   }
 }
 
+async function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => { data += chunk; });
+    req.on('end', () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req, res) {
+  // 等待 neon 加载 (超时 2s, 失败也不阻塞)
+  await Promise.race([
+    neonPromise,
+    new Promise((r) => setTimeout(r, 2000)),
+  ]);
+
   const url = new URL(req.url || '/', `http://${req.headers.host}`);
   const path = url.pathname;
 
@@ -60,7 +123,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // 页面: 根目录 + artist-vote 入口
+  // 页面
   if (path === '/' || path === '/index.html') {
     const rootIndex = readPageOrNull('index.html');
     if (rootIndex) {
@@ -93,9 +156,33 @@ export default async function handler(req, res) {
     return res.status(404).send('Image not found: ' + filename);
   }
 
-  // API: 获取艺术家列表
+  // API: 艺术家列表
   if (path === '/api/artists') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    if (neonReady && sql) {
+      try {
+        await ensureDb();
+        const rows = await sql`SELECT id, name, cat, votes FROM artists_votes ORDER BY id`;
+        const metaMap = {};
+        for (const a of artistsData) metaMap[a.id] = a;
+        const merged = rows.map((r) => {
+          const meta = metaMap[r.id] || {};
+          return {
+            id: r.id,
+            name: meta.name || r.name,
+            artist: meta.artist || '',
+            cat: meta.cat || r.cat,
+            votes: r.votes || 0,
+            colors: meta.colors || ['#ccc', '#aaa', '#eee'],
+            imageUrl: meta.imageUrl || null,
+          };
+        });
+        return res.status(200).json(merged);
+      } catch (e) {
+        console.error('[api/artists] DB error:', e.message);
+        return res.status(200).json(artistsData);
+      }
+    }
     return res.status(200).json(artistsData);
   }
 
@@ -106,24 +193,74 @@ export default async function handler(req, res) {
       ok: true,
       version: process.version,
       artistsCount: artistsData.length,
-      __dirname,
-      cwd: process.cwd(),
+      neonReady,
+      dbConfigured: !!DATABASE_URL,
     });
   }
 
-  // API: 调试
-  if (path === '/api/debug') {
+  // API: 检查某观众今天已投过哪些艺术家
+  if (path === '/api/check-fingerprint' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    let parent = 'error';
-    let apiSelf = 'error';
-    try { parent = readdirSync(join(__dirname, '..')); } catch (e) { parent = e.message; }
-    try { apiSelf = readdirSync(__dirname); } catch (e) { apiSelf = e.message; }
-    return res.status(200).json({
-      __dirname,
-      cwd: process.cwd(),
-      parent,
-      apiSelf,
-    });
+    try {
+      const { fingerprint } = await readJsonBody(req);
+      const today = getTodayKey();
+      if (!fingerprint || !neonReady || !sql) {
+        return res.status(200).json({ voted: false, voted_today: [], today });
+      }
+      await ensureDb();
+      const rows = await sql`SELECT artist_id FROM daily_votes WHERE fingerprint = ${fingerprint} AND vote_date = ${today}`;
+      const voted_today = rows.map((r) => r.artist_id);
+      return res.status(200).json({ voted: voted_today.length > 0, voted_today, today });
+    } catch (e) {
+      return res.status(200).json({ voted: false, voted_today: [], today: getTodayKey(), error: e.message });
+    }
+  }
+
+  // API: 给单艺术家投票 (每位观众每天每艺术家 1 票)
+  if (path === '/api/vote' && req.method === 'POST') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    try {
+      const body = await readJsonBody(req);
+      const { artist_id, fingerprint } = body;
+      if (!artist_id) return res.status(400).json({ error: '缺少 artist_id' });
+      if (!fingerprint) return res.status(400).json({ error: '缺少 fingerprint' });
+
+      const validIds = new Set(artistsData.map((a) => a.id));
+      if (!validIds.has(Number(artist_id))) {
+        return res.status(400).json({ error: `无效艺术家 ID: ${artist_id}` });
+      }
+
+      const today = getTodayKey();
+
+      if (!neonReady || !sql) {
+        return res.status(503).json({ error: '数据库未配置, 投票功能不可用' });
+      }
+
+      await ensureDb();
+
+      // 检查今天是否已投过该艺术家
+      const existing = await sql`SELECT id FROM daily_votes WHERE fingerprint = ${fingerprint} AND artist_id = ${artist_id} AND vote_date = ${today}`;
+      if (existing.length > 0) {
+        return res.status(409).json({ error: '今天已经给这位艺术家投过票了, 明天再来吧', voted_today: [Number(artist_id)] });
+      }
+
+      // 插入 daily_votes (UNIQUE 约束防重)
+      try {
+        await sql`INSERT INTO daily_votes (fingerprint, artist_id, vote_date) VALUES (${fingerprint}, ${artist_id}, ${today})`;
+      } catch (e) {
+        if (e.message && e.message.includes('unique')) {
+          return res.status(409).json({ error: '今天已经给这位艺术家投过票了' });
+        }
+        throw e;
+      }
+
+      // 艺术家总票数 +1
+      await sql`UPDATE artists_votes SET votes = votes + 1 WHERE id = ${artist_id}`;
+
+      return res.status(200).json({ success: true, artist_id: Number(artist_id), vote_date: today });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 
   // 404
