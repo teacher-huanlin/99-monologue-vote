@@ -6,7 +6,8 @@
       "config": {
         "includeFiles": [
           "artist-vote/**",
-          "index.html"
+          "index.html",
+          "api/admin.html"
         ]
       }
     }

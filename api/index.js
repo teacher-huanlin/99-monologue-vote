@@ -298,6 +298,57 @@ export default async function handler(req, res) {
     }
   }
 
+  // API: 管理员统计 (总票数/投票人数/最高票数/Top10)
+  if (path === '/api/stats') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    if (!neonReady || !sql) {
+      return res.status(200).json({ total_votes: 0, total_voters: 0, today_votes: 0, top10: [] });
+    }
+    try {
+      await ensureDb();
+      const totals = await sql`SELECT COALESCE(SUM(votes),0)::int as total FROM artists_votes`;
+      const voters = await sql`SELECT COUNT(DISTINCT fingerprint)::int as total FROM daily_votes`;
+      const today = getTodayKey();
+      const todayTotals = await sql`SELECT COUNT(*)::int as total FROM daily_votes WHERE vote_date = ${today}`;
+      // 拿 metaMap 拿到艺术家名字
+      const metaMap = {};
+      for (const a of artistsData) metaMap[a.id] = a;
+      const top = await sql`SELECT id, votes FROM artists_votes ORDER BY votes DESC LIMIT 10`;
+      const top10 = top.map((t) => ({
+        id: t.id,
+        name: metaMap[t.id]?.name || `#${t.id}`,
+        votes: t.votes || 0,
+      }));
+      return res.status(200).json({
+        total_votes: totals[0]?.total || 0,
+        total_voters: voters[0]?.total || 0,
+        today_votes: todayTotals[0]?.total || 0,
+        top10,
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // /admin 管理后台 (Basic Auth)
+  if (path === '/admin' || path === '/admin/') {
+    if (!checkAuth(req)) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Admin Panel"');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(401).send('<h1>401 Unauthorized</h1><p>需要管理员账号密码 (默认 admin / admin123)</p>');
+    }
+    try {
+      const adminHtml = readPageOrNull('admin.html');
+      if (adminHtml) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(200).send(adminHtml);
+      }
+      return res.status(500).send('admin.html not found');
+    } catch (e) {
+      return res.status(500).send('Admin page error: ' + e.message);
+    }
+  }
+
   // 404
   return res.status(404).json({ error: 'Not found', path });
 }
