@@ -135,7 +135,7 @@ body {
 /* ===== Artist Card ===== */
 .artist-card {
   background: var(--card-bg);
-  border-radius: var(--radius);
+  border-radius: 0;
   overflow: hidden;
   cursor: pointer;
   transition: var(--transition);
@@ -489,9 +489,9 @@ body {
     <h1>九十九出独角戏第二季</h1>
     <p class="subtitle">为您欣赏的艺术家投出珍贵一票</p>
     <div class="rules">
-      <span><span class="dot"></span>每人 5 票</span>
-      <span><span class="dot"></span>每位艺术家限投 1 票</span>
-      <span><span class="dot"></span>确认后不可更改</span>
+      <span><span class="dot"></span>每天每位艺术家 1 票</span>
+      <span><span class="dot"></span>每天 0 点刷新</span>
+      <span><span class="dot"></span>跨日可重复投票</span>
     </div>
   </div>
 </header>
@@ -552,10 +552,11 @@ function getFingerprint() {
 // ============================================================
 let ARTISTS = [];
 let selectedIds = [];
-let myVotedIds = [];
-let hasAlreadyVoted = false;
+let myVotedIds = [];        // 指纹 (跨会话稳定) — 用于判断已投
+let myTodayVotedIds = [];   // 今天已投的 id (决定 UI 状态)
+let hasAlreadyVoted = false; // 今天是否已投过 (任一)
 let isLoading = true;
-const MAX_VOTES = 5;
+const MAX_VOTES_PER_DAY = 33; // 每天最多给 33 个艺术家各投 1 票
 
 async function loadArtistsFromAPI() {
   try {
@@ -580,7 +581,7 @@ async function checkVotedStatus() {
     const data = await res.json();
     if (data.voted) {
       hasAlreadyVoted = true;
-      myVotedIds = data.voted_ids || [];
+      myTodayVotedIds = data.voted_ids || data.voted_today || [];
     }
   } catch (e) {
     console.error('Failed to check vote status:', e);
@@ -641,12 +642,12 @@ function renderArtistGrid() {
 
   grid.innerHTML = ARTISTS.map(a => {
     const isSelected = selectedIds.includes(a.id);
-    const isVotedByMe = myVotedIds.includes(a.id);
+    const isVotedToday = myTodayVotedIds.includes(a.id);
     return `
-      <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedByMe && hasAlreadyVoted ? 'voted-by-me' : ''}"
+      <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedToday ? 'voted-by-me' : ''}"
            data-id="${a.id}"
            onclick="toggleArtist(${a.id})"
-           style="${hasAlreadyVoted ? 'cursor:default;' : ''}">
+           style="${isVotedToday ? 'cursor:not-allowed;opacity:0.55;' : ''}">
         <div class="card-poster">
           ${posterHTML(a)}
         </div>
@@ -672,12 +673,12 @@ function renderVoteDoneBanner() {
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       </div>
-      <h3>投票提交成功</h3>
+      <h3>今天已为这些艺术家投票</h3>
       <p>感谢参与「九十九出独角戏第二季」</p>
       <div class="voted-list">
         ${names.map(n => `<span class="voted-tag">${n}</span>`).join('')}
       </div>
-      <p style="font-size:13px;color:#aaa;">投票已记录，不可重复提交</p>
+      <p style="font-size:13px;color:#aaa;">明天 0 点后可再次投票</p>
     </div>`;
 }
 
@@ -699,28 +700,25 @@ function updateVoteBar() {
     return;
   }
 
-  if (hasAlreadyVoted) {
-    submitBtn.textContent = '已投票 ✓';
+  document.getElementById('vote-bar').style.opacity = '1';
+  clearBtn.style.display = '';
+
+  // 已选数量 (排除已投过的)
+  const pendingNew = selectedIds.filter(id => !myTodayVotedIds.includes(id));
+
+  if (pendingNew.length > 0) {
+    submitBtn.textContent = `确认投票 (${pendingNew.length} 位) ✨`;
+    submitBtn.disabled = false;
+    submitBtn.classList.add('ready');
+  } else if (selectedIds.length > 0) {
+    // 全是已投过的
+    submitBtn.textContent = '这些艺术家今天已投过';
     submitBtn.disabled = true;
     submitBtn.classList.remove('ready');
-    clearBtn.style.display = 'none';
-    document.getElementById('vote-bar').style.opacity = '0.6';
   } else {
-    document.getElementById('vote-bar').style.opacity = '1';
-    clearBtn.style.display = '';
-    if (selectedIds.length === MAX_VOTES) {
-      submitBtn.textContent = '确认投票 ✨';
-      submitBtn.disabled = false;
-      submitBtn.classList.add('ready');
-    } else if (selectedIds.length > 0) {
-      submitBtn.textContent = `还差 ${MAX_VOTES - selectedIds.length} 票`;
-      submitBtn.disabled = true;
-      submitBtn.classList.remove('ready');
-    } else {
-      submitBtn.textContent = '请选择艺术家';
-      submitBtn.disabled = true;
-      submitBtn.classList.remove('ready');
-    }
+    submitBtn.textContent = '请选择艺术家 (每天每位 1 票)';
+    submitBtn.disabled = true;
+    submitBtn.classList.remove('ready');
   }
 }
 
@@ -728,15 +726,15 @@ function updateVoteBar() {
 // Interaction
 // ============================================================
 function toggleArtist(id) {
-  if (hasAlreadyVoted) return;
+  // 今天已投过的不能选 (明天 0 点后自动解锁)
+  if (myTodayVotedIds.includes(id)) {
+    shakeElement(document.querySelector(`.artist-card[data-id="${id}"]`));
+    return;
+  }
   const idx = selectedIds.indexOf(id);
   if (idx >= 0) {
     selectedIds.splice(idx, 1);
   } else {
-    if (selectedIds.length >= MAX_VOTES) {
-      shakeElement(document.getElementById('submit-btn'));
-      return;
-    }
     selectedIds.push(id);
   }
   renderArtistGrid();
@@ -769,7 +767,9 @@ function clearSelection() {
 // Modal
 // ============================================================
 function confirmVote() {
-  if (selectedIds.length !== MAX_VOTES || hasAlreadyVoted) return;
+  // 只要有选中 (排除已投的) 就能确认
+  const pendingNew = selectedIds.filter(id => !myTodayVotedIds.includes(id));
+  if (pendingNew.length === 0) return;
   const list = document.getElementById('confirm-list');
   list.innerHTML = selectedIds.map(id => {
     const a = ARTISTS.find(x => x.id === id);
@@ -802,8 +802,11 @@ async function submitVote() {
     const data = await res.json();
     
     if (res.ok && data.success) {
-      hasAlreadyVoted = true;
-      myVotedIds = [...selectedIds];
+      // 锁定今天已投的 id, 清空选择
+      const inserted = data.inserted || selectedIds;
+      myTodayVotedIds = [...myTodayVotedIds, ...inserted.filter(id => !myTodayVotedIds.includes(id))];
+      if (myTodayVotedIds.length > 0) hasAlreadyVoted = true;
+      selectedIds = [];
       closeModal();
       renderArtistGrid();
     } else {
