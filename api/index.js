@@ -7,14 +7,6 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..');
 
-function readdirSyncSafe(p) {
-  try {
-    return readdirSync(p);
-  } catch (e) {
-    return `error: ${e.message}`;
-  }
-}
-
 // 读取 artists.json
 let artistsData = [];
 try {
@@ -116,8 +108,21 @@ export default async function handler(req, res) {
       artistsCount: artistsData.length,
       __dirname,
       cwd: process.cwd(),
-      listing: readdirSyncSafe(join(__dirname, '..')),
-      apiListing: readdirSyncSafe(__dirname),
+    });
+  }
+
+  // API: 调试
+  if (path === '/api/debug') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    let parent = 'error';
+    let apiSelf = 'error';
+    try { parent = readdirSync(join(__dirname, '..')); } catch (e) { parent = e.message; }
+    try { apiSelf = readdirSync(__dirname); } catch (e) { apiSelf = e.message; }
+    return res.status(200).json({
+      __dirname,
+      cwd: process.cwd(),
+      parent,
+      apiSelf,
     });
   }
 
