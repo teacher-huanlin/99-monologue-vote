@@ -1,5 +1,4 @@
 // 九十九出独角戏第二季 — 投票后端 (Node.js)
-import { neon } from '@neondatabase/serverless';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -20,10 +19,18 @@ const DATABASE_URL = process.env.DATABASE_URL || '';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
 
+// 动态 import neon — 如果 neon 缺失/版本不兼容, 降级为 no-DB 模式 (仍然能读图/投票前端可用)
 let sql = null;
-if (DATABASE_URL) {
-  sql = neon(DATABASE_URL);
-}
+const neonPromise = import('@neondatabase/serverless')
+  .then((mod) => {
+    if (DATABASE_URL) {
+      sql = mod.neon(DATABASE_URL);
+      console.log('[neon] loaded successfully');
+    }
+  })
+  .catch((e) => {
+    console.error('[neon] failed to load, running without DB:', e.message);
+  });
 
 // 获取当天日期字符串 (YYYY-MM-DD, UTC+8 中国时区)
 function getTodayKey() {
@@ -125,6 +132,9 @@ function getArtistsWithVotes(rows) {
 }
 
 export default async function handler(req, res) {
+  // 等待 neon 加载完成 (不阻塞静态资源响应)
+  await neonPromise;
+
   const url = new URL(req.url || '/', `http://${req.headers.host}`);
   const path = url.pathname;
 
