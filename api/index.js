@@ -226,29 +226,33 @@ export default async function handler(req, res) {
       const { fingerprint } = await readJsonBody(req);
       const today = getTodayKey();
       if (!fingerprint || !neonReady || !sql) {
-        return res.status(200).json({ voted: false, voted_today: [], today });
+        return res.status(200).json({ voted: false, voted_today: [], voted_ids: [], today });
       }
       await ensureDb();
       const rows = await sql`SELECT artist_id FROM daily_votes WHERE fingerprint = ${fingerprint} AND vote_date = ${today}`;
       const voted_today = rows.map((r) => r.artist_id);
-      return res.status(200).json({ voted: voted_today.length > 0, voted_today, today });
+      return res.status(200).json({ voted: voted_today.length > 0, voted_today, voted_ids: voted_today, today });
     } catch (e) {
-      return res.status(200).json({ voted: false, voted_today: [], today: getTodayKey(), error: e.message });
+      return res.status(200).json({ voted: false, voted_today: [], voted_ids: [], today: getTodayKey(), error: e.message });
     }
   }
 
-  // API: 给单艺术家投票 (每位观众每天每艺术家 1 票)
+  // API: 投票 (支持 voted_ids 数组或单数 artist_id)
   if (path === '/api/vote' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     try {
       const body = await readJsonBody(req);
-      const { artist_id, fingerprint } = body;
-      if (!artist_id) return res.status(400).json({ error: '缺少 artist_id' });
+      const { artist_id, voted_ids, fingerprint } = body;
       if (!fingerprint) return res.status(400).json({ error: '缺少 fingerprint' });
 
+      // 兼容 voted_ids 数组 (前端实际发的格式)
+      const ids = voted_ids ? voted_ids.map(Number) : (artist_id ? [Number(artist_id)] : []);
+      if (ids.length === 0) return res.status(400).json({ error: '缺少 artist_id 或 voted_ids' });
+
       const validIds = new Set(artistsData.map((a) => a.id));
-      if (!validIds.has(Number(artist_id))) {
-        return res.status(400).json({ error: `无效艺术家 ID: ${artist_id}` });
+      const invalid = ids.filter((id) => !validIds.has(id));
+      if (invalid.length > 0) {
+        return res.status(400).json({ error: `无效艺术家 ID: ${invalid.join(', ')}` });
       }
 
       const today = getTodayKey();
@@ -259,26 +263,37 @@ export default async function handler(req, res) {
 
       await ensureDb();
 
-      // 检查今天是否已投过该艺术家
-      const existing = await sql`SELECT id FROM daily_votes WHERE fingerprint = ${fingerprint} AND artist_id = ${artist_id} AND vote_date = ${today}`;
-      if (existing.length > 0) {
-        return res.status(409).json({ error: '今天已经给这位艺术家投过票了, 明天再来吧', voted_today: [Number(artist_id)] });
-      }
+      // 找出今天已经投过的 id (跳过, 不重复插入)
+      const existingRows = await sql`SELECT artist_id FROM daily_votes WHERE fingerprint = ${fingerprint} AND vote_date = ${today} AND artist_id = ANY(${ids})`;
+      const existingSet = new Set(existingRows.map((r) => r.artist_id));
+      const newIds = ids.filter((id) => !existingSet.has(id));
 
-      // 插入 daily_votes (UNIQUE 约束防重)
-      try {
-        await sql`INSERT INTO daily_votes (fingerprint, artist_id, vote_date) VALUES (${fingerprint}, ${artist_id}, ${today})`;
-      } catch (e) {
-        if (e.message && e.message.includes('unique')) {
-          return res.status(409).json({ error: '今天已经给这位艺术家投过票了' });
+      // 插入新投票 (UNIQUE 约束防重)
+      for (const id of newIds) {
+        try {
+          await sql`INSERT INTO daily_votes (fingerprint, artist_id, vote_date) VALUES (${fingerprint}, ${id}, ${today})`;
+          await sql`UPDATE artists_votes SET votes = votes + 1 WHERE id = ${id}`;
+        } catch (e) {
+          if (e.message && e.message.includes('unique')) {
+            // 并发重复, 忽略
+            continue;
+          }
+          throw e;
         }
-        throw e;
       }
 
-      // 艺术家总票数 +1
-      await sql`UPDATE artists_votes SET votes = votes + 1 WHERE id = ${artist_id}`;
+      // 返回完整当天已投列表
+      const allRows = await sql`SELECT artist_id FROM daily_votes WHERE fingerprint = ${fingerprint} AND vote_date = ${today}`;
+      const voted_today = allRows.map((r) => r.artist_id);
 
-      return res.status(200).json({ success: true, artist_id: Number(artist_id), vote_date: today });
+      return res.status(200).json({
+        success: true,
+        voted_ids: voted_today,
+        voted_today,
+        inserted: newIds,
+        skipped: ids.filter((id) => existingSet.has(id)),
+        vote_date: today,
+      });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
