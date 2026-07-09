@@ -198,6 +198,27 @@ export default async function handler(req, res) {
     });
   }
 
+  // API: 调试 - 看 artist-vote/images 目录到底有什么
+  if (path === '/api/debug-images') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const imagesDir = join(__dirname, '..', 'artist-vote', 'images');
+    let info = {
+      imagesDir,
+      exists: false,
+      files: [],
+      error: null,
+    };
+    try {
+      info.exists = existsSync(imagesDir);
+      if (info.exists) {
+        info.files = readdirSync(imagesDir);
+      }
+    } catch (e) {
+      info.error = e.message;
+    }
+    return res.status(200).json(info);
+  }
+
   // API: 检查某观众今天已投过哪些艺术家
   if (path === '/api/check-fingerprint' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
