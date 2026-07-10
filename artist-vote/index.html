@@ -658,22 +658,8 @@ function renderArtistGrid() {
 
 function renderVoteDoneBanner() {
   const area = document.getElementById('vote-done-area');
-  if (!hasAlreadyVoted) { area.innerHTML = ''; return; }
-  const names = myVotedIds.map(id => ARTISTS.find(a => a.id === id)?.name || '').filter(Boolean);
-  area.innerHTML = `
-    <div class="vote-done-banner">
-      <div class="check-icon">
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      </div>
-      <h3>今天已为这些艺术家投票</h3>
-      <p>感谢参与「九十九出独角戏第二季」</p>
-      <div class="voted-list">
-        ${names.map(n => `<span class="voted-tag">${n}</span>`).join('')}
-      </div>
-      <p style="font-size:13px;color:#aaa;">明天 0 点后可再次投票</p>
-    </div>`;
+  // 不再持续显示成功 banner (占篇幅), 用户投完弹窗已经告知, 已投的卡片在 grid 里已标灰
+  area.innerHTML = '';
 }
 
 function updateVoteBar() {
