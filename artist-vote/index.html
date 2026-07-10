@@ -280,24 +280,6 @@ body {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.vote-bar .clear-btn {
-  padding: 10px 20px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  border-radius: 50px;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-secondary);
-  transition: var(--transition);
-  white-space: nowrap;
-  font-weight: 500;
-}
-.vote-bar .clear-btn:hover {
-  border-color: var(--accent-light);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.vote-bar .submit-btn {
   padding: 13px 36px;
   border: none;
   background: var(--accent);
@@ -462,7 +444,6 @@ body {
   }
   .vote-bar .selected-summary { order: 1; width: 100%; }
   .vote-bar .submit-btn { order: 2; width: 100%; text-align: center; }
-  .vote-bar .clear-btn { order: 3; }
   .hero { padding: 40px 16px 44px; }
   .hero h1 { letter-spacing: 1.5px; }
   .hero .rules { padding: 10px 18px; gap: 6px 16px; font-size: 13px; }
@@ -512,7 +493,6 @@ body {
     <span class="selected-count">已选 <strong id="selected-num">0</strong> 位</span>
     <div class="selected-pills" id="selected-pills"></div>
   </div>
-  <button class="clear-btn" id="clear-btn" onclick="clearSelection()">清空重选</button>
   <button class="submit-btn" id="submit-btn" onclick="confirmVote()" disabled>确认投票</button>
 </div>
 
@@ -674,18 +654,15 @@ function updateVoteBar() {
   }).join('');
 
   const submitBtn = document.getElementById('submit-btn');
-  const clearBtn = document.getElementById('clear-btn');
 
   if (isLoading) {
     submitBtn.textContent = '加载中...';
     submitBtn.disabled = true;
     submitBtn.classList.remove('ready');
-    clearBtn.style.display = 'none';
     return;
   }
 
   document.getElementById('vote-bar').style.opacity = '1';
-  clearBtn.style.display = '';
 
   // 已选数量 (排除已投过的)
   const pendingNew = selectedIds.filter(id => !myTodayVotedIds.includes(id));
@@ -740,12 +717,6 @@ shakeStyle.textContent = `
     75% { transform: translateX(-4px); }
   }`;
 document.head.appendChild(shakeStyle);
-
-function clearSelection() {
-  if (hasAlreadyVoted) return;
-  selectedIds = [];
-  renderArtistGrid();
-}
 
 // ============================================================
 // Modal
