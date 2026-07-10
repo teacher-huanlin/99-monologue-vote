@@ -280,6 +280,7 @@ body {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+.vote-bar .submit-btn {
   padding: 13px 36px;
   border: none;
   background: var(--accent);
@@ -298,13 +299,15 @@ body {
   box-shadow: 0 6px 24px rgba(232,106,88,0.35);
 }
 .vote-bar .submit-btn:disabled {
-  opacity: 0.4;
+  background: var(--accent-soft);
+  color: #c4a59a;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+  opacity: 1;
 }
 .vote-bar .submit-btn.ready {
-  background: linear-gradient(135deg, var(--accent), #d45341);
+  background: var(--accent);
   box-shadow: 0 4px 20px rgba(232,106,88,0.35);
   animation: subtlePulse 2s ease-in-out infinite;
 }
