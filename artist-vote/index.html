@@ -355,8 +355,9 @@ body {
   background: rgba(0,0,0,0.4);
   backdrop-filter: blur(2px);
   z-index: 200;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
   padding: 20px;
+  overflow-y: auto;
   animation: fadeIn 0.2s ease;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -366,6 +367,8 @@ body {
   padding: 36px 32px;
   max-width: 460px;
   width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   box-shadow: 0 24px 64px rgba(0,0,0,0.15);
   animation: modalIn 0.3s ease;
 }
