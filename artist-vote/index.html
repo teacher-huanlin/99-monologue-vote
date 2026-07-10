@@ -638,7 +638,7 @@ function renderArtistGrid() {
     const isSelected = selectedIds.includes(a.id);
     const isVotedToday = myTodayVotedIds.includes(a.id);
     const votedOverlay = isVotedToday
-      ? `<div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;font-size:13px;font-weight:700;letter-spacing:1px;text-shadow:0 1px 4px rgba(0,0,0,.55);z-index:2;pointer-events:none;">今日已投</div>`
+      ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;font-size:18px;font-weight:800;letter-spacing:2px;text-shadow:0 2px 8px rgba(0,0,0,.7),0 0 2px rgba(0,0,0,.5);z-index:3;pointer-events:none;white-space:nowrap;">今日已投</div>`
       : '';
     return `
       <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedToday ? 'voted-by-me' : ''}"
