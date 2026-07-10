@@ -767,8 +767,13 @@ function closeModal() {
 }
 
 async function submitVote() {
-  if (hasAlreadyVoted) return;
-  
+  // 过滤掉今天已投的, 只投新的
+  const pendingNew = selectedIds.filter(id => !myTodayVotedIds.includes(id));
+  if (pendingNew.length === 0) {
+    closeModal();
+    return;
+  }
+
   const submitBtn = document.getElementById('submit-btn');
   submitBtn.textContent = '提交中...';
   submitBtn.disabled = true;
@@ -779,15 +784,15 @@ async function submitVote() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        voted_ids: [...selectedIds],
+        voted_ids: pendingNew,
         fingerprint: fp,
       }),
     });
     const data = await res.json();
-    
+
     if (res.ok && data.success) {
       // 锁定今天已投的 id, 清空选择
-      const inserted = data.inserted || selectedIds;
+      const inserted = data.inserted || pendingNew;
       myTodayVotedIds = [...myTodayVotedIds, ...inserted.filter(id => !myTodayVotedIds.includes(id))];
       if (myTodayVotedIds.length > 0) hasAlreadyVoted = true;
       selectedIds = [];
