@@ -637,6 +637,9 @@ function renderArtistGrid() {
   grid.innerHTML = ARTISTS.map(a => {
     const isSelected = selectedIds.includes(a.id);
     const isVotedToday = myTodayVotedIds.includes(a.id);
+    const votedOverlay = isVotedToday
+      ? `<div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;font-size:13px;font-weight:700;letter-spacing:1px;text-shadow:0 1px 4px rgba(0,0,0,.55);z-index:2;pointer-events:none;">今日已投</div>`
+      : '';
     return `
       <div class="artist-card ${isSelected ? 'selected' : ''} ${isVotedToday ? 'voted-by-me' : ''}"
            data-id="${a.id}"
@@ -644,6 +647,7 @@ function renderArtistGrid() {
            style="${isVotedToday ? 'cursor:not-allowed;opacity:0.55;' : ''}">
         <div class="card-poster">
           ${posterHTML(a)}
+          ${votedOverlay}
         </div>
         <div class="card-info">
           <div class="artist-name">${a.name}</div>
