@@ -349,6 +349,25 @@ export default async function handler(req, res) {
     }
   }
 
+  // /api/admin/reset 清零所有投票数据 (Basic Auth)
+  if (path === '/api/admin/reset') {
+    if (!checkAuth(req)) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Admin Panel"');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!neonReady || !sql) {
+      return res.status(503).json({ error: '数据库未配置' });
+    }
+    try {
+      await ensureDb();
+      await sql`UPDATE artists_votes SET votes = 0`;
+      await sql`DELETE FROM daily_votes`;
+      return res.status(200).json({ ok: true, message: '所有投票数据已清零', clearedAt: new Date().toISOString() });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // 404
   return res.status(404).json({ error: 'Not found', path });
 }
