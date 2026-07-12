@@ -1,6 +1,6 @@
 // 九十九出独角戏第二季 — 投票后端 (Node.js)
 // 阶段 2: 静态资源 + daily_votes 投票机制
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -19,6 +19,19 @@ try {
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
 const DATABASE_URL = process.env.DATABASE_URL || '';
+
+// 给图片 URL 自动加 ?v=<mtime> 版本号, 让浏览器在图片更新后刷新即可看到新图
+function imageUrlWithVersion(imageUrl) {
+  if (!imageUrl) return null;
+  const filename = imageUrl.split('/').pop().split('?')[0];
+  try {
+    const imgPath = join(__dirname, '..', 'artist-vote', 'images', filename);
+    const mtime = statSync(imgPath).mtimeMs;
+    return `${imageUrl}?v=${Math.floor(mtime)}`;
+  } catch (e) {
+    return imageUrl;
+  }
+}
 
 // 动态 import neon (失败也不影响静态资源 serve)
 let sql = null;
@@ -174,15 +187,15 @@ export default async function handler(req, res) {
           cat: a.cat || '',
           votes: votesMap[a.id] || 0,
           colors: a.colors || ['#ccc', '#aaa', '#eee'],
-          imageUrl: a.imageUrl || null,
+          imageUrl: imageUrlWithVersion(a.imageUrl),
         }));
         return res.status(200).json(merged);
       } catch (e) {
         console.error('[api/artists] DB error:', e.message);
-        return res.status(200).json(artistsData);
+        return res.status(200).json(artistsData.map((a) => ({ ...a, imageUrl: imageUrlWithVersion(a.imageUrl) })));
       }
     }
-    return res.status(200).json(artistsData);
+    return res.status(200).json(artistsData.map((a) => ({ ...a, imageUrl: imageUrlWithVersion(a.imageUrl) })));
   }
 
   // API: 健康检查
