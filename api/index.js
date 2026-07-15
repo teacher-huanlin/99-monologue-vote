@@ -381,6 +381,92 @@ export default async function handler(req, res) {
     }
   }
 
+  // /api/admin/analyze 投票数据集中度分析 (Basic Auth)
+  // 只读 daily_votes, 计算: 总票数/独立用户/头部集中度/时间分布/爆发检测
+  if (path === '/api/admin/analyze') {
+    if (!checkAuth(req)) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Admin Panel"');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    if (!neonReady || !sql) {
+      return res.status(503).json({ error: '数据库未配置' });
+    }
+    try {
+      await ensureDb();
+
+      // 1. 总票数 + 独立用户
+      const totalRow = await sql`SELECT COUNT(*)::int AS total FROM daily_votes`;
+      const totalVotes = totalRow[0]?.total || 0;
+      const uniqRow = await sql`SELECT COUNT(DISTINCT fingerprint)::int AS uniq FROM daily_votes`;
+      const uniqueFingerprints = uniqRow[0]?.uniq || 0;
+      const avgVotesPerUser = uniqueFingerprints > 0 ? +(totalVotes / uniqueFingerprints).toFixed(2) : 0;
+
+      // 2. 头部艺术家 (票数最多) + 集中度
+      const topArtistRow = await sql`SELECT id, name, votes FROM artists_votes ORDER BY votes DESC LIMIT 1`;
+      const topArtist = topArtistRow[0] || null;
+      const topArtistShare = totalVotes > 0 && topArtist ? +(topArtist.votes / totalVotes).toFixed(3) : 0;
+
+      // 3. Fingerprint 集中度 (一个人投了几个艺术家)
+      const fpCounts = await sql`SELECT fingerprint, COUNT(*)::int AS cnt FROM daily_votes GROUP BY fingerprint`;
+      const concentration = {
+        usersWhoVotedAll33: 0,
+        usersWhoVoted20Plus: 0,
+        usersWhoVoted10to19: 0,
+        usersWhoVoted4to9: 0,
+        usersWhoVoted1to3: 0,
+      };
+      for (const r of fpCounts) {
+        if (r.cnt >= 33) concentration.usersWhoVotedAll33++;
+        else if (r.cnt >= 20) concentration.usersWhoVoted20Plus++;
+        else if (r.cnt >= 10) concentration.usersWhoVoted10to19++;
+        else if (r.cnt >= 4) concentration.usersWhoVoted4to9++;
+        else concentration.usersWhoVoted1to3++;
+      }
+
+      // 4. 每天的票数
+      const dateRows = await sql`SELECT vote_date, COUNT(*)::int AS cnt FROM daily_votes GROUP BY vote_date ORDER BY vote_date`;
+      const dateDistribution = {};
+      for (const r of dateRows) dateDistribution[r.vote_date] = r.cnt;
+
+      // 5. 每小时的票数 (按 UTC 小时)
+      const hourRows = await sql`SELECT EXTRACT(HOUR FROM voted_at AT TIME ZONE 'UTC')::int AS h, COUNT(*)::int AS cnt FROM daily_votes GROUP BY h ORDER BY h`;
+      const votesByHour = {};
+      for (let i = 0; i < 24; i++) votesByHour[i] = 0;
+      for (const r of hourRows) votesByHour[r.h] = r.cnt;
+
+      // 6. 按分钟聚合, 检测异常爆发 (1 分钟内 > 10 票)
+      const minuteRows = await sql`SELECT TO_CHAR(voted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI') AS minute, COUNT(*)::int AS cnt FROM daily_votes GROUP BY minute ORDER BY cnt DESC LIMIT 10`;
+      const voteBursts = minuteRows.filter((r) => r.cnt >= 10).map((r) => ({ minute: r.minute, count: r.cnt }));
+
+      // 7. 全部艺术家按票数排序
+      const allArtists = await sql`SELECT id, name, votes FROM artists_votes ORDER BY votes DESC`;
+
+      // 8. 投票时间范围
+      const rangeRow = await sql`SELECT MIN(voted_at) AS first_vote, MAX(voted_at) AS last_vote FROM daily_votes`;
+      const timeRange = {
+        first: rangeRow[0]?.first_vote || null,
+        last: rangeRow[0]?.last_vote || null,
+      };
+
+      return res.status(200).json({
+        totalVotes,
+        uniqueFingerprints,
+        avgVotesPerUser,
+        topArtist,
+        topArtistShare,
+        concentration,
+        dateDistribution,
+        votesByHour,
+        voteBursts,
+        allArtists,
+        timeRange,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // 404
   return res.status(404).json({ error: 'Not found', path });
 }
