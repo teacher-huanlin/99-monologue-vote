@@ -405,6 +405,22 @@ export default async function handler(req, res) {
       const topArtistRow = await sql`SELECT id, name, votes FROM artists_votes ORDER BY votes DESC LIMIT 1`;
       const topArtist = topArtistRow[0] || null;
       const topArtistShare = totalVotes > 0 && topArtist ? +(topArtist.votes / totalVotes).toFixed(3) : 0;
+      const topArtistId = topArtist?.id || 0;
+
+      // 头部艺术家时间分布 (按天 / 按小时 / 按分钟爆发)
+      let topArtistDailyTimeline = {};
+      let topArtistHourlyTimeline = {};
+      let topArtistMinuteBursts = [];
+      if (topArtistId > 0) {
+        const dailyRows = await sql`SELECT vote_date, COUNT(*)::int AS cnt FROM daily_votes WHERE artist_id = ${topArtistId} GROUP BY vote_date ORDER BY vote_date`;
+        for (const r of dailyRows) topArtistDailyTimeline[r.vote_date] = r.cnt;
+
+        const hourlyRows = await sql`SELECT TO_CHAR(voted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24') AS hour, COUNT(*)::int AS cnt FROM daily_votes WHERE artist_id = ${topArtistId} GROUP BY hour ORDER BY hour`;
+        for (const r of hourlyRows) topArtistHourlyTimeline[r.hour] = r.cnt;
+
+        const minuteRows = await sql`SELECT TO_CHAR(voted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI') AS minute, COUNT(*)::int AS cnt FROM daily_votes WHERE artist_id = ${topArtistId} GROUP BY minute ORDER BY cnt DESC LIMIT 20`;
+        topArtistMinuteBursts = minuteRows.map((r) => ({ minute: r.minute, count: r.cnt }));
+      }
 
       // 3. Fingerprint 集中度 (一个人投了几个艺术家)
       const fpCounts = await sql`SELECT fingerprint, COUNT(*)::int AS cnt FROM daily_votes GROUP BY fingerprint`;
@@ -460,6 +476,9 @@ export default async function handler(req, res) {
         voteBursts,
         allArtists,
         timeRange,
+        topArtistDailyTimeline,
+        topArtistHourlyTimeline,
+        topArtistMinuteBursts,
         generatedAt: new Date().toISOString(),
       });
     } catch (e) {
