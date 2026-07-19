@@ -470,6 +470,7 @@ body {
 <body>
 
 <!-- Hero -->
+<div style="background:#1ea669;color:#fff;text-align:center;padding:14px 20px;font-size:18px;font-weight:700;letter-spacing:2px;opacity:0.85;">活动已结束 · 感谢您的关注</div>
 <header class="hero">
   <div class="hero-content">
     <div class="badge">THE 99 SOLOS · SEASON 2</div>
@@ -521,6 +522,7 @@ body {
 // API
 // ============================================================
 const API_BASE = window.location.origin;
+const VOTE_CLOSED = true;  // 活动已截止 - 硬编码
 
 // Fingerprint: UUID stored in localStorage for deduplication
 const FP_KEY = 'monologue_fingerprint_v3';
@@ -661,6 +663,14 @@ function updateVoteBar() {
 
   const submitBtn = document.getElementById('submit-btn');
 
+  if (VOTE_CLOSED) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '投票已结束';
+    submitBtn.style.opacity = '0.5';
+    submitBtn.style.cursor = 'not-allowed';
+    return;
+  }
+
   if (isLoading) {
     submitBtn.textContent = '加载中...';
     submitBtn.disabled = true;
@@ -693,6 +703,7 @@ function updateVoteBar() {
 // Interaction
 // ============================================================
 function toggleArtist(id) {
+  if (VOTE_CLOSED) return;
   // 今天已投过的不能选 (明天 0 点后自动解锁)
   if (myTodayVotedIds.includes(id)) {
     shakeElement(document.querySelector(`.artist-card[data-id="${id}"]`));
@@ -744,6 +755,7 @@ function closeModal() {
 }
 
 async function submitVote() {
+  if (VOTE_CLOSED) return;
   // 过滤掉今天已投的, 只投新的
   const pendingNew = selectedIds.filter(id => !myTodayVotedIds.includes(id));
   if (pendingNew.length === 0) {

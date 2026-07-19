@@ -19,6 +19,7 @@ try {
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
 const DATABASE_URL = process.env.DATABASE_URL || '';
+const VOTE_CLOSED = true;  // 活动已截止 - 硬编码
 
 // 给图片 URL 自动加 ?v=<mtime> 版本号, 让浏览器在图片更新后刷新即可看到新图
 function imageUrlWithVersion(imageUrl) {
@@ -252,6 +253,9 @@ export default async function handler(req, res) {
   // API: 投票 (支持 voted_ids 数组或单数 artist_id)
   if (path === '/api/vote' && req.method === 'POST') {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    if (VOTE_CLOSED) {
+      return res.status(410).json({ error: '投票活动已截止', closed: true });
+    }
     try {
       const body = await readJsonBody(req);
       const { artist_id, voted_ids, fingerprint } = body;
